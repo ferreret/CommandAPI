@@ -12,6 +12,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("SqlDbConnection"));
 });
+builder.Services.AddScoped<ICommandRepo, SqlCommandRepo>();
 
 var app = builder.Build();
 
@@ -25,62 +26,61 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // Get Single
-app.MapGet("api/v1/commands/{commandId}", async (string commandId, AppDbContext dbContext) =>
+app.MapGet("api/v1/commands/{commandId}", async (string commandId, ICommandRepo repo) =>
 {
-    var command = await dbContext.Commands.FirstOrDefaultAsync(c => c.CommandId == commandId);
+    var command = await repo.GetCommandByIdAsync(commandId);
     if (command == null)
     {
         return Results.NotFound();
     }
+
     return Results.Ok(command);
 });
 
 // Get All
-app.MapGet("api/v1/commands", async (AppDbContext dbContext) =>
+app.MapGet("api/v1/commands", async (ICommandRepo repo) =>
 {
-    var commands = await dbContext.Commands.ToListAsync();
+    var commands = await repo.GetAllCommandsAsync();
     return Results.Ok(commands);
 });
 
 // Create
-app.MapPost("api/v1/commands", async (AppDbContext dbContext, Command cmd) =>
+app.MapPost("api/v1/commands", async (ICommandRepo repo, Command cmd) =>
 {
-    await dbContext.Commands.AddAsync(cmd);
-    await dbContext.SaveChangesAsync();
+    await repo.CreateCommandAsync(cmd);
+    await repo.SaveChangesAsync();
     return Results.Created($"/api/v1/commands/{cmd.CommandId}", cmd);
 });
 
 // Update
-app.MapPut("api/v1/commands/{commandId}", async (AppDbContext dbContext, string commandId, Command cmd) =>
+app.MapPut("api/v1/commands/{commandId}", async (ICommandRepo repo, string commandId, Command cmd) =>
 {
-    var command = await dbContext.Commands.FirstOrDefaultAsync(c => c.CommandId == commandId);
+    var command = await repo.GetCommandByIdAsync(commandId);
     if (command == null)
     {
         return Results.NotFound();
     }
 
-    // Lo siguiente está mal hecho, se tendrían que utilizar DTO's
     command.HowTo = cmd.HowTo;
     command.Platform = cmd.Platform;
     command.CommandLine = cmd.CommandLine;
-    await dbContext.SaveChangesAsync();
-    return Results.Ok(command);
+
+    await repo.SaveChangesAsync();
+    return Results.NoContent();
 });
 
 // Delete
-app.MapDelete("api/v1/commands/{commandId}", async (AppDbContext dbContext, string commandId) =>
+app.MapDelete("api/v1/commands/{commandId}", async (ICommandRepo repo, string commandId) =>
 {
-    var command = await dbContext.Commands.FirstOrDefaultAsync(c => c.CommandId == commandId);
+    var command = await repo.GetCommandByIdAsync(commandId);
     if (command == null)
     {
         return Results.NotFound();
     }
 
-    dbContext.Commands.Remove(command);
-    await dbContext.SaveChangesAsync();
+    repo.DeleteCommand(command);
+    await repo.SaveChangesAsync();
     return Results.NoContent();
 });
 
 app.Run();
-
-
