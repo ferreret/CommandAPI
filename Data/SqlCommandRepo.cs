@@ -26,21 +26,25 @@ namespace CommandAPI.Data
             _dbContext.Commands.Remove(cmd);
         }
 
-        public async Task<IEnumerable<Command>> GetAllCommandsAsync()
+        public async Task<IEnumerable<Command?>> GetAllCommandsAsync()
         {
             return await _dbContext.Commands.ToListAsync();
         }
 
-        public async Task<Command> GetCommandByIdAsync(string commandId)
+        public async Task<Command?> GetCommandByIdAsync(string commandId)
         {
-#pragma warning disable CS8603 // Possible null reference return.
             return await _dbContext.Commands.SingleOrDefaultAsync(c => c.CommandId == commandId);
-#pragma warning restore CS8603 // Possible null reference return.
         }
 
         public async Task SaveChangesAsync()
         {
             await _dbContext.SaveChangesAsync();
+        }
+
+        public Task UpdateCommandAsync(Command cmd)
+        {
+            Console.WriteLine("--> UpdateCommandAsync in SqlCommandRepo called redundantly ...");
+            return Task.CompletedTask;
         }
     }
 }
